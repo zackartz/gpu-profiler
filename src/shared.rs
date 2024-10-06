@@ -1,4 +1,6 @@
-use std::sync::Mutex;
+use std::{num::NonZero, sync::Mutex};
+
+use puffin::ScopeDetails;
 
 const MAX_FRAMES_IN_FLIGHT: usize = 4;
 
@@ -192,21 +194,30 @@ impl TimedFrame {
         let mut stream = puffin::Stream::default();
         let mut gpu_time_accum: puffin::NanoSecond = 0;
         let mut puffin_scope_count = 0;
-        let main_gpu_scope_offset = stream.begin_scope(gpu_frame_start_ns, "frame", "", "");
+        let (main_gpu_scope_offset, _) = stream.begin_scope(
+            || gpu_frame_start_ns,
+            puffin::ScopeId(NonZero::new(1).unwrap()),
+            "",
+        );
         puffin_scope_count += 1;
         puffin_scope_count += self.scopes.len();
         for TimedScope { name, duration } in &self.scopes {
             let ns = duration.raw_ns() as puffin::NanoSecond;
-            let offset = stream.begin_scope(gpu_frame_start_ns + gpu_time_accum, name, "", "");
+            let (offset, _) = stream.begin_scope(
+                || gpu_time_accum + gpu_frame_start_ns,
+                puffin::ScopeId(NonZero::new(2).unwrap()),
+                "",
+            );
             gpu_time_accum += ns;
             stream.end_scope(offset, gpu_frame_start_ns + gpu_time_accum);
         }
         stream.end_scope(main_gpu_scope_offset, gpu_frame_start_ns + gpu_time_accum);
-        puffin::global_reporter(
+        puffin::internal_profile_reporter(
             puffin::ThreadInfo {
                 start_time_ns: None,
                 name: "gpu".to_owned(),
             },
+            &[],
             &puffin::StreamInfo {
                 num_scopes: puffin_scope_count,
                 stream,
