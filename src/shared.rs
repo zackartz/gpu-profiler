@@ -25,6 +25,11 @@ impl ScopeId {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
+struct FrameScopeId {
+    scope: u32,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub struct NanoSecond(u64);
 
