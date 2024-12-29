@@ -1,7 +1,5 @@
 use std::{num::NonZero, sync::Mutex};
 
-use puffin::ScopeDetails;
-
 const MAX_FRAMES_IN_FLIGHT: usize = 4;
 
 pub fn profiler() -> std::sync::MutexGuard<'static, GpuProfiler> {
@@ -23,11 +21,6 @@ impl ScopeId {
             scope: !0,
         }
     }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
-struct FrameScopeId {
-    scope: u32,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
@@ -217,12 +210,12 @@ impl TimedFrame {
             stream.end_scope(offset, gpu_frame_start_ns + gpu_time_accum);
         }
         stream.end_scope(main_gpu_scope_offset, gpu_frame_start_ns + gpu_time_accum);
-        puffin::internal_profile_reporter(
+        println!("scope_count {}", puffin_scope_count);
+        puffin::GlobalProfiler::lock().report_user_scopes(
             puffin::ThreadInfo {
                 start_time_ns: None,
                 name: "gpu".to_owned(),
             },
-            &[],
             &puffin::StreamInfo {
                 num_scopes: puffin_scope_count,
                 stream,
